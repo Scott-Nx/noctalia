@@ -336,6 +336,7 @@ location = "https://example.invalid/bad"
   // checks exercise real serialization rather than all-defaults.
   Config makeProbe() {
     Config c;
+    c.polkit.allowEmptyPassword = true;
     c.audio = AudioConfig{true, true, 0.73F, "freedesktop"};
     c.weather = WeatherConfig{false, false, 17, "imperial"};
     c.osd.position = "bottom_left";
@@ -684,6 +685,36 @@ location = "https://example.invalid/bad"
       if (s.clipboardHistoryMaxEntries != 10000) {
         fail("shell.clipboard_history_max_entries clamp: expected 10000");
       }
+    }
+  }
+
+  void checkPolkitEmptyPassword() {
+    const Config defaults;
+    if (defaults.polkit.allowEmptyPassword) {
+      fail("polkit: empty passwords must be disabled by default");
+    }
+    const SectionSpec* section = findSection("polkit");
+    if (section == nullptr) {
+      fail("polkit: missing config section");
+      return;
+    }
+    Config config;
+    Diagnostics diagnostics;
+    section->read(toml::table{}, config, diagnostics);
+    if (config.polkit.allowEmptyPassword) {
+      fail("polkit: omitted setting must remain disabled");
+    }
+    section->read(toml::parse("allow_empty_password = true"), config, diagnostics);
+    if (!config.polkit.allowEmptyPassword || config.lockscreen.allowEmptyPassword) {
+      fail("polkit: opt-in must enable only polkit empty passwords");
+    }
+    const auto changes = computeConfigChangeSet(defaults, config);
+    if (!changes.polkit || !changes.any() || changes.lockscreen) {
+      fail("polkit: config reload must detect the independent setting");
+    }
+    section->read(toml::parse("allow_empty_password = false"), config, diagnostics);
+    if (config.polkit.allowEmptyPassword || computeConfigChangeSet(defaults, config).any()) {
+      fail("polkit: explicit false must restore default behavior");
     }
   }
 
@@ -1291,6 +1322,7 @@ widget_spacing = 8
   checkStorageKeySourceValidation();
   checkPanelFloatingLayerValidation();
   checkClamps();
+  checkPolkitEmptyPassword();
   checkMonitorFontScaleChangeSet();
   checkPluginAutoUpdateMode();
   checkAutoUpdateScopeSelection();
