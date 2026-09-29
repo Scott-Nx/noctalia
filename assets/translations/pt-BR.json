@@ -652,7 +652,7 @@
         "variant-default": "Padrão",
         "variant-destructive": "Destrutivo",
         "variant-ghost": "Ghost",
-        "variant-outline": "Outline",
+        "variant-outline": "Contorno",
         "variant-primary": "Primário",
         "variant-secondary": "Secundário",
         "vertical": "Vertical",
@@ -3075,9 +3075,21 @@
           "description": "Desenha um contorno ao redor do OSD",
           "label": "Borda"
         },
+        "osd-border-color": {
+          "description": "Função de cor do contorno para o popup de OSD; color fixas em hex também são suportadas",
+          "label": "Cor de Borda"
+        },
+        "osd-border-width": {
+          "description": "Largura do contorno dos popups de OSD em pixels; 0 oculta o contorno",
+          "label": "Espessura de Borda"
+        },
         "osd-enabled": {
           "description": "Interruptor principal para todos os OSDs; quando desabilitado, nenhum OSD é exibido",
           "label": "Habilitar OSD"
+        },
+        "osd-hide-delay": {
+          "description": "Por quanto tempo um popup de OSD permanece visível antes de ser ocultado",
+          "label": "Atraso para Ocultar"
         },
         "osd-kinds-bluetooth": {
           "description": "Exibir um OSD quando o Bluetooth for habilitado/desabilitado",
@@ -3444,7 +3456,7 @@
         "default": "Padrão",
         "destructive": "Destrutivo",
         "ghost": "Ghost",
-        "outline": "Outline",
+        "outline": "Contorno",
         "primary": "Primário",
         "secondary": "Secundário"
       },
@@ -4189,7 +4201,7 @@
         "focused-output-only": {
           "description": "Somente destaque o espaço de trabalho ativo no monitor em foco",
           "label": "Destacar Somente Monitor Focado",
-          "taskbar-description": "Use a cor de foco apenas para o espaço de trabalho ativo no monitor que estiver com o foco do teclado ou do ponteiro; os outros monitores usam a cor de ocupado",
+          "taskbar-description": "Somente evidencie o espaço de trabalho no monitor que tem o foco do teclado ou do ponteiro; espaços de trabalho em outros monitores usam a cor de ocupado e o estilo de cápsula inativa",
           "workspaces-description": "Destacar somente o espaço de trabalho ativo no monitor que tem o foco do teclado ou ponteiro; outros monitores mostram seus espaços de trabalho ativos como ocupados"
         },
         "font-family": {

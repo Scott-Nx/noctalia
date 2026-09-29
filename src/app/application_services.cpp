@@ -576,9 +576,13 @@ void Application::initStyleThemeAndWayland() {
         : Input::PasswordMaskStyle::CircleFilled;
     Input::setPasswordMaskStyle(style);
   };
+  auto applyInputConfig = [this]() {
+    Input::setReadlineShortcutsEnabled(m_configService.config().shell.readlineShortcuts);
+  };
   applyMotionConfig();
   applyStyleConfig();
   applyPasswordMaskStyle();
+  applyInputConfig();
   m_httpClient.setOfflineMode(m_configService.config().shell.offlineMode);
   m_scriptApi.setConfigSnapshot(
       std::make_shared<const toml::table>(config_export::serialize(m_configService.config()))
@@ -586,6 +590,7 @@ void Application::initStyleThemeAndWayland() {
   m_configService.addReloadCallback(applyMotionConfig);
   m_configService.addReloadCallback(applyStyleConfig);
   m_configService.addReloadCallback(applyPasswordMaskStyle);
+  m_configService.addReloadCallback(applyInputConfig);
   m_configService.addReloadCallback([this]() {
     m_httpClient.setOfflineMode(m_configService.config().shell.offlineMode);
     m_scriptApi.setConfigSnapshot(

@@ -19,6 +19,7 @@ telemetry_enabled     = false        # send an anonymous startup ping
 niri_overview_type_to_launch_enabled = false # opt in to type-to-launch from niri overview
 polkit_agent          = false
 password_style        = "default"    # default | random
+readline_shortcuts    = false        # readline-style shortcuts in every text field (Ctrl+A = line start)
 settings_show_advanced = true        # show advanced settings by default in Settings
 settings_expand_all_groups = false   # expand every group on Settings pages by default
 # settings_window_translucent = false  # translucent settings window background
@@ -369,6 +370,7 @@ delete   = ["del"]
 position           = "top"          # top | bottom | left | right
 thickness          = 34
 background_opacity = 1.0
+compositor_blur    = true          # false stops compositor blur for this bar
 radius             = 12
 margin_ends        = 180
 margin_edge        = 10
@@ -402,8 +404,9 @@ end    = ["media", "tray", "notifications", "clipboard", "network", "bluetooth",
 
 # Per-monitor override example; only the fields you list are overridden:
 # [bar.main.monitor.dp1]
-# match     = "DP-1"
-# thickness = 44
+# match           = "DP-1"
+# thickness       = 44
+# compositor_blur = false
 # [bar.main.monitor.dp1.dead_zone.actions]
 # left = "panel-toggle launcher"
 

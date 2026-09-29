@@ -204,6 +204,7 @@ location = "https://example.invalid/bad"
     bar.layer = "overlay";
     bar.thickness = 44;
     bar.backgroundOpacity = 0.85F;
+    bar.compositorBlur = false;
     bar.border = colorSpecFromConfigString("#123456");
     bar.borderWidth = 2.0F;
     bar.radius = 18;
@@ -277,6 +278,7 @@ location = "https://example.invalid/bad"
     ovr.layer = "top";
     ovr.thickness = 50;
     ovr.backgroundOpacity = 0.7F;
+    ovr.compositorBlur = true;
     ovr.border = colorSpecFromConfigString("#a1a2a3");
     ovr.borderWidth = 3.0F;
     ovr.radius = 22;
@@ -384,6 +386,7 @@ location = "https://example.invalid/bad"
         .position = "bottom_left",
         .layer = "overlay",
         .scale = 1.3F,
+        .width = 420,
         .backgroundOpacity = 0.5F,
         .border = false,
         .offsetX = 12,
@@ -487,6 +490,7 @@ location = "https://example.invalid/bad"
     c.shell.lang = "en_US";
     c.shell.timeFormat = "{:%H:%M:%S}";
     c.shell.passwordMaskStyle = PasswordMaskStyle::RandomIcons;
+    c.shell.readlineShortcuts = true;
     c.shell.clipboardHistoryMaxEntries = 80;
     c.shell.clipboardAutoPaste = ClipboardAutoPasteMode::CtrlV;
     c.storage.keySource = StorageKeySource::File;
@@ -686,6 +690,24 @@ location = "https://example.invalid/bad"
         fail("shell.clipboard_history_max_entries clamp: expected 10000");
       }
     }
+    {
+      auto t = toml::parse("width = 100");
+      NotificationConfig n{};
+      Diagnostics d;
+      readInto(t, n, notificationSchema(), "notification", d);
+      if (n.width != static_cast<std::int32_t>(*kNotificationWidthRange.min)) {
+        fail("notification.width clamp: expected 240");
+      }
+    }
+    {
+      auto t = toml::parse("width = 2000");
+      NotificationConfig n{};
+      Diagnostics d;
+      readInto(t, n, notificationSchema(), "notification", d);
+      if (n.width != static_cast<std::int32_t>(*kNotificationWidthRange.max)) {
+        fail("notification.width clamp: expected 500");
+      }
+    }
   }
 
   void checkPolkitEmptyPassword() {
@@ -718,7 +740,7 @@ location = "https://example.invalid/bad"
     }
   }
 
-  void checkMonitorFontScaleChangeSet() {
+  void checkMonitorOverrideChangeSet() {
     Config before;
     BarConfig bar;
     bar.name = "default";
@@ -727,10 +749,16 @@ location = "https://example.invalid/bad"
     bar.monitorOverrides.push_back(monitor);
     before.bars.push_back(bar);
 
-    Config after = before;
-    after.bars.front().monitorOverrides.front().fontScale = 1.5F;
-    if (!computeConfigChangeSet(before, after).bars) {
+    Config fontScaleChanged = before;
+    fontScaleChanged.bars.front().monitorOverrides.front().fontScale = 1.5F;
+    if (!computeConfigChangeSet(before, fontScaleChanged).bars) {
       fail("monitor font_scale override did not mark bars changed");
+    }
+
+    Config blurChanged = before;
+    blurChanged.bars.front().monitorOverrides.front().compositorBlur = false;
+    if (!computeConfigChangeSet(before, blurChanged).bars) {
+      fail("monitor compositor_blur override did not mark bars changed");
     }
   }
 
@@ -1094,6 +1122,7 @@ capsule_radius = 12.0
 capsule_thickness = 0.5
 center = [ "clock", "weather" ]
 color = "#0A0B0C"
+compositor_blur = false
 concave_edge_corners = true
 contact_shadow = true
 enabled = false
@@ -1153,6 +1182,7 @@ widget_spacing = 8
     capsule_thickness = 0.25
     center = [ "media" ]
     color = "#E1E2E3"
+    compositor_blur = true
     concave_edge_corners = false
     contact_shadow = false
     enabled = true
@@ -1323,7 +1353,7 @@ widget_spacing = 8
   checkPanelFloatingLayerValidation();
   checkClamps();
   checkPolkitEmptyPassword();
-  checkMonitorFontScaleChangeSet();
+  checkMonitorOverrideChangeSet();
   checkPluginAutoUpdateMode();
   checkAutoUpdateScopeSelection();
   checkDuplicatePluginSourceRejection();

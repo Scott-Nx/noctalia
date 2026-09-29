@@ -74,6 +74,7 @@ struct BarMonitorOverride {
   std::optional<std::string> layer; // top | overlay
   std::optional<std::int32_t> thickness;
   std::optional<float> backgroundOpacity;
+  std::optional<bool> compositorBlur;
   std::optional<ColorSpec> border;
   std::optional<float> borderWidth;
   std::optional<std::int32_t> radius;
@@ -143,6 +144,7 @@ struct BarConfig {
   std::string layer = "top"; // top | overlay; attached panels use the same layer
   std::int32_t thickness = Style::barThicknessDefault;
   float backgroundOpacity = 1.0F;
+  bool compositorBlur = true;
   // Inside outline for the bar background; attached panels inherit the resolved values.
   ColorSpec border = colorSpecFromRole(ColorRole::Outline);
   float borderWidth = 0.0F;
@@ -773,12 +775,15 @@ struct OsdConfig {
 };
 
 struct NotificationConfig {
+  static constexpr std::int32_t kDefaultWidth = 360;
+
   bool enableDaemon = true;
   bool showAppName = true;
   bool showActions = true;
   std::string position = "top_right";
   std::string layer = "top"; // top | overlay
   float scale = 1.0F;
+  std::int32_t width = kDefaultWidth;
   float backgroundOpacity = 0.97F; // toast card background alpha (0.0–1.0)
   bool border = true;              // outline around toast cards
   ColorSpec borderColor = colorSpecFromRole(ColorRole::Outline);
@@ -1161,6 +1166,8 @@ struct ShellConfig {
   bool umbrielOverviewTypeToLaunchEnabled = false;
   bool polkitAgent = false;
   PasswordMaskStyle passwordMaskStyle = PasswordMaskStyle::CircleFilled;
+  /// Readline-style editing shortcuts in every text input (Ctrl+A moves to the start instead of selecting all).
+  bool readlineShortcuts = false;
   AnimationConfig animation;
   std::string avatarPath;
   bool settingsShowAdvanced = true;

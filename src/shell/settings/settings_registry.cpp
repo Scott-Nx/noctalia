@@ -1793,6 +1793,11 @@ namespace settings {
         "calendar date format strftime chrono"
     ));
     entries.push_back(makeEntry(
+        SettingsSection::Shell, "general", tr("settings.schema.shell.readline-shortcuts.label"),
+        tr("settings.schema.shell.readline-shortcuts.description"), {"shell", "readline_shortcuts"},
+        ToggleSetting{cfg.shell.readlineShortcuts}, "readline emacs keyboard shortcuts text input line editing"
+    ));
+    entries.push_back(makeEntry(
         SettingsSection::Shell, "keyboard-layout", tr("settings.schema.shell.keyboard-layout-custom-labels.label"),
         tr("settings.schema.shell.keyboard-layout-custom-labels.description"),
         {"shell", "keyboard_layout", "custom_labels"},
@@ -3097,6 +3102,15 @@ namespace settings {
         tr("settings.schema.notifications.scale.description"), {"notification", "scale"},
         sliderFor(cfg.notification.scale, noctalia::config::schema::kScaleRange, false), "toast size scale"
     ));
+    {
+      SliderSetting width = sliderFor(cfg.notification.width, noctalia::config::schema::kNotificationWidthRange, true);
+      width.valueSuffix = "px";
+      entries.push_back(makeEntry(
+          SettingsSection::Notifications, "toasts", tr("settings.schema.notifications.width.label"),
+          tr("settings.schema.notifications.width.description"), {"notification", "width"}, std::move(width),
+          "toast size dimension wide narrow"
+      ));
+    }
     entries.push_back(makeEntry(
         SettingsSection::Notifications, "toasts", tr("settings.schema.notifications.offset-x.label"),
         tr("settings.schema.notifications.offset-x.description"), {"notification", "offset_x"},
@@ -3309,6 +3323,13 @@ namespace settings {
           tr("settings.schema.bar.background-opacity.description"), path("background_opacity"),
           SliderSetting{bar.backgroundOpacity, 0.0F, 1.0F, 0.01F, false}, "alpha"
       ));
+      if (env.backgroundEffectBlurSupported) {
+        entries.push_back(makeEntry(
+            section, "effects", tr("settings.schema.bar.compositor-blur.label"),
+            tr("settings.schema.bar.compositor-blur.description"), path("compositor_blur"),
+            ToggleSetting{bar.compositorBlur}, "blur frosted background effect wayland"
+        ));
+      }
       entries.push_back(makeEntry(
           section, "effects", tr("settings.schema.shared.shadow.label"), tr("settings.schema.bar.shadow.description"),
           path("shadow"), ToggleSetting{bar.shadow}, "shadow"
@@ -3650,6 +3671,13 @@ namespace settings {
             tr("settings.schema.bar.background-opacity.description"), monitorPath("background_opacity"),
             SliderSetting{ovr.backgroundOpacity.value_or(bar.backgroundOpacity), 0.0F, 1.0F, 0.01F, false}, "alpha"
         ));
+        if (env.backgroundEffectBlurSupported) {
+          entries.push_back(makeEntry(
+              section, "effects", tr("settings.schema.bar.compositor-blur.label"),
+              tr("settings.schema.bar.compositor-blur.description"), monitorPath("compositor_blur"),
+              ToggleSetting{ovr.compositorBlur.value_or(bar.compositorBlur)}, "blur frosted background effect wayland"
+          ));
+        }
         entries.push_back(makeEntry(
             section, "effects", tr("settings.schema.shared.shadow.label"), tr("settings.schema.bar.shadow.description"),
             monitorPath("shadow"), ToggleSetting{ovr.shadow.value_or(bar.shadow)}, "shadow"
