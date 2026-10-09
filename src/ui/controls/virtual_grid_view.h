@@ -69,9 +69,17 @@ public:
     return false;
   }
 
-  // Called when an adapter-consumed primary-button press is released. Returns
-  // true when the visible pool needs rebinding.
-  virtual bool onPointerRelease(std::optional<std::size_t> /*index*/) { return false; }
+  struct PointerReleaseResult {
+    // The visible pool needs rebinding.
+    bool rebind = false;
+    // Item to activate. The view activates it after rebinding, as its last
+    // action, because activation may destroy the view.
+    std::optional<std::size_t> activateIndex;
+  };
+
+  // Called when an adapter-consumed primary-button press is released. Must not
+  // activate items itself; return the index in activateIndex instead.
+  virtual PointerReleaseResult onPointerRelease(std::optional<std::size_t> /*index*/) { return {}; }
   virtual void onPointerCancel() {}
 
   [[nodiscard]] virtual bool overlayHitTest(

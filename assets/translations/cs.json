@@ -1722,10 +1722,6 @@
         "main-axis-padding": {
           "description": "Vnitřní odsazení podél hlavní osy docku (mezi ikonami a krátkými konci kapsle)"
         },
-        "monitors": {
-          "description": "Vybrat, které monitory zobrazují dock (ponechte prázdné pro všechny); filtrování aktivního monitoru se uplatní v rámci těchto monitorů",
-          "label": "Monitory"
-        },
         "pinned-apps": {
           "description": "ID desktop entry aplikací připnutých k docku",
           "label": "Připnuté aplikace"

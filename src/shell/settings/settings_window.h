@@ -56,6 +56,10 @@ struct PointerEvent;
 struct wl_output;
 struct wl_surface;
 
+namespace scripting {
+  class PluginRecommendations;
+}
+
 namespace settings {
   class SettingsDialogPresenter;
   struct SettingsContentContext;
@@ -104,6 +108,9 @@ public:
     m_openLockscreenWidgetEditor = std::move(callback);
   }
   void setOpenWallpaperPanel(std::function<void()> callback) { m_openWallpaperPanel = std::move(callback); }
+  void setPluginRecommendations(scripting::PluginRecommendations* recommendations) {
+    m_pluginRecommendations = recommendations;
+  }
   void setPluginManager(scripting::PluginManager* manager) { m_pluginManager = manager; }
   void setSyncGreeterAppearance(std::function<void()> callback) { m_syncGreeterAppearance = std::move(callback); }
   void setResetLauncherUsage(std::function<void()> callback) { m_resetLauncherUsage = std::move(callback); }
@@ -187,7 +194,7 @@ private:
   void openBarWidgetAddPopup(const std::vector<std::string>& lanePath);
   // Request is taken by value because opening the popup can close the sheet that owns the forwarding control.
   void openSearchPickerPopup(settings::SearchPickerOpenRequest request);
-  void openMonitorOverrideCreateDialog(std::string barName);
+  void openMonitorOverrideCreateDialog(std::optional<std::string> barName);
   void openSessionActionEntryEditor(std::size_t index);
   void syncSessionActionInlineSummary(std::size_t index, const SessionPanelActionConfig& row);
   void openIdleBehaviorEntryEditor(std::size_t index);
@@ -226,6 +233,9 @@ private:
   void createMonitorOverride(std::string barName, std::string match);
   void renameMonitorOverride(std::string barName, std::string oldMatch, std::string newMatch);
   void deleteMonitorOverride(std::string barName, std::string match);
+  void createDockMonitorOverride(std::string match);
+  void renameDockMonitorOverride(std::string oldTableName, std::string newMatch);
+  void deleteDockMonitorOverride(std::string tableName);
   [[nodiscard]] float uiScale() const;
 
   [[nodiscard]] std::optional<LayerPopupParentContext> topmostPopupParentContext() const;
@@ -236,6 +246,7 @@ private:
   IdleManager* m_idleManager = nullptr;
   ConfigService* m_config = nullptr;
   scripting::PluginManager* m_pluginManager = nullptr;
+  scripting::PluginRecommendations* m_pluginRecommendations = nullptr;
   // Cached PluginManager::list() — discovery can spawn git, so refresh it off the UI path.
   std::vector<scripting::PluginStatus> m_pluginList;
   bool m_pluginListDirty = true;
@@ -344,6 +355,8 @@ private:
   std::string m_renamingMonitorOverrideMatch;
   std::string m_pendingDeleteMonitorOverrideBarName;
   std::string m_pendingDeleteMonitorOverrideMatch;
+  std::string m_renamingDockMonitorOverride;
+  std::string m_pendingDeleteDockMonitorOverride;
   std::string m_pendingDeletePluginId;
   std::string m_selectedBarName;
   std::string m_selectedMonitorOverride;

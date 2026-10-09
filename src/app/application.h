@@ -33,6 +33,7 @@
 #include "render/gl_shared_context.h"
 #include "render/render_context.h"
 #include "scripting/plugin_manager.h"
+#include "scripting/plugin_recommendations.h"
 #include "scripting/plugin_service_host.h"
 #include "scripting/script_api_context.h"
 #include "security/secret_store.h"
@@ -250,6 +251,7 @@ private:
   scripting::ScriptApiContext m_scriptApi;
   std::function<void()> m_syncScriptApiOutputs;
   scripting::PluginManager m_pluginManager{m_configService};
+  scripting::PluginRecommendations m_pluginRecommendations{m_configService, m_httpClient, m_pluginManager};
   scripting::PluginServiceHost m_pluginServiceHost{m_scriptApi, &m_httpClient, &m_clipboardService, &m_fileWatcher};
   TimeService m_timeService;
   LockKeysService m_lockKeysService;

@@ -778,20 +778,21 @@ public:
     return true;
   }
 
-  bool onPointerRelease(std::optional<std::size_t> /*index*/) override {
+  PointerReleaseResult onPointerRelease(std::optional<std::size_t> /*index*/) override {
     const auto sourceIndex = m_dragSourceIndex;
     const auto targetIndex = m_dropIndex;
     const bool reordered = m_dragging && sourceIndex.has_value() && targetIndex.has_value() && m_onReorder;
-    const bool activated = !m_dragging && sourceIndex.has_value() && m_onActivate;
+    const bool activated = !m_dragging && sourceIndex.has_value();
     m_dragSourceIndex.reset();
     m_dropIndex.reset();
     m_dragging = false;
     if (reordered) {
       m_onReorder(*sourceIndex, *targetIndex);
-    } else if (activated) {
-      m_onActivate(*sourceIndex);
     }
-    return sourceIndex.has_value() || targetIndex.has_value();
+    return {
+        .rebind = sourceIndex.has_value() || targetIndex.has_value(),
+        .activateIndex = activated ? sourceIndex : std::nullopt,
+    };
   }
 
   void onPointerCancel() override {
@@ -925,20 +926,21 @@ public:
     return true;
   }
 
-  bool onPointerRelease(std::optional<std::size_t> /*index*/) override {
+  PointerReleaseResult onPointerRelease(std::optional<std::size_t> /*index*/) override {
     const auto sourceIndex = m_dragSourceIndex;
     const auto targetIndex = m_dropIndex;
     const bool reordered = m_dragging && sourceIndex.has_value() && targetIndex.has_value() && m_onReorder;
-    const bool activated = !m_dragging && sourceIndex.has_value() && m_onActivate;
+    const bool activated = !m_dragging && sourceIndex.has_value();
     m_dragSourceIndex.reset();
     m_dropIndex.reset();
     m_dragging = false;
     if (reordered) {
       m_onReorder(*sourceIndex, *targetIndex);
-    } else if (activated) {
-      m_onActivate(*sourceIndex);
     }
-    return sourceIndex.has_value() || targetIndex.has_value();
+    return {
+        .rebind = sourceIndex.has_value() || targetIndex.has_value(),
+        .activateIndex = activated ? sourceIndex : std::nullopt,
+    };
   }
 
   void onPointerCancel() override {

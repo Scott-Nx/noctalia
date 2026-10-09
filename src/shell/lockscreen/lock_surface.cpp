@@ -12,6 +12,7 @@
 #include "render/render_context.h"
 #include "render/scene/wallpaper_node.h"
 #include "shell/lockscreen/lockscreen_login_box.h"
+#include "shell/lockscreen/lockscreen_session_actions.h"
 #include "shell/lockscreen/lockscreen_widgets_host.h"
 #include "shell/session/session_action_meta.h"
 #include "shell/session/session_action_runner.h"
@@ -25,7 +26,6 @@
 #include "ui/palette.h"
 #include "ui/style.h"
 #include "util/clamp.h"
-#include "util/string_utils.h"
 #include "wayland/wayland_connection.h"
 #include "wayland/wayland_seat.h"
 
@@ -504,6 +504,28 @@ LockSurface::LockSurface(WaylandConnection& connection, ConfigService* config) :
 
   m_loginContentRow->addChild(
       ui::button({
+          .out = &m_passwordRevealButton,
+          .text = "",
+          .glyph = "eye",
+          .glyphSize = 16.0F,
+          .variant = ButtonVariant::Ghost,
+          .onClick =
+              [this]() {
+                if (m_passwordField == nullptr) {
+                  return;
+                }
+                const bool revealed = !m_passwordField->passwordRevealed();
+                m_passwordField->setPasswordRevealed(revealed);
+                if (m_passwordRevealButton != nullptr) {
+                  m_passwordRevealButton->setGlyph(revealed ? "eye-off" : "eye");
+                }
+              },
+          .configure = [](Button& button) { button.setZIndex(2); },
+      })
+  );
+
+  m_loginContentRow->addChild(
+      ui::button({
           .out = &m_loginButton,
           .text = "",
           .glyph = "check",
@@ -647,6 +669,13 @@ void LockSurface::setLockedState(bool locked) {
   }
   m_locked = locked;
   if (m_locked) {
+    // Never carry a revealed password across lock cycles.
+    if (m_passwordField != nullptr) {
+      m_passwordField->setPasswordRevealed(false);
+    }
+    if (m_passwordRevealButton != nullptr) {
+      m_passwordRevealButton->setGlyph("eye");
+    }
     focusPasswordField();
   } else {
     m_inputDispatcher.setFocus(nullptr);
@@ -1148,6 +1177,9 @@ void LockSurface::layoutScene(std::uint32_t width, std::uint32_t height) {
     m_widgetLayer->setVisible(false);
     m_loginPanel->setVisible(false);
     m_passwordField->setVisible(false);
+    if (m_passwordRevealButton != nullptr) {
+      m_passwordRevealButton->setVisible(false);
+    }
     m_loginButton->setVisible(false);
     if (m_infoRow != nullptr) {
       m_infoRow->setVisible(false);
@@ -1176,6 +1208,9 @@ void LockSurface::layoutScene(std::uint32_t width, std::uint32_t height) {
   m_loginPanel->setVisible(loginVisible);
   m_loginContentRow->setVisible(loginVisible);
   m_passwordField->setVisible(loginVisible);
+  if (m_passwordRevealButton != nullptr) {
+    m_passwordRevealButton->setVisible(loginVisible);
+  }
   m_loginButton->setVisible(loginVisible && loginStyle.showLoginButton);
 
   const bool regular = loginVisible && loginStyle.layout == lockscreen_login_box::LayoutMode::Regular;
@@ -1443,6 +1478,12 @@ void LockSurface::layoutScene(std::uint32_t width, std::uint32_t height) {
     m_loginButton->setGlyphSize(sessionGlyphSize);
   }
 
+  if (m_passwordRevealButton != nullptr) {
+    m_passwordRevealButton->setRadius(Style::scaledRadius(loginStyle.inputRadius));
+    m_passwordRevealButton->setSize(controlHeight, controlHeight);
+    m_passwordRevealButton->setGlyphSize(sessionGlyphSize);
+  }
+
   m_loginPanel->arrange(renderer, LayoutRect{panelX, panelY, panelWidth, panelHeight});
 
   // Auth panel: sibling above/below the login box (flips below when near the top edge).
@@ -1491,6 +1532,9 @@ void LockSurface::layoutScene(std::uint32_t width, std::uint32_t height) {
 void LockSurface::updateCopy() {
   m_passwordField->setValue(m_password);
   m_passwordField->setEnabled(!m_authenticating);
+  if (m_passwordRevealButton != nullptr) {
+    m_passwordRevealButton->setEnabled(!m_authenticating);
+  }
   if (m_loginButton != nullptr) {
     m_loginButton->setEnabled(!m_authenticating);
   }
@@ -1527,35 +1571,9 @@ void LockSurface::updateCopy() {
 }
 
 std::vector<SessionPanelActionConfig> LockSurface::resolveSessionActions() const {
-  std::vector<SessionPanelActionConfig> src =
+  const std::vector<SessionPanelActionConfig> src =
       m_config != nullptr ? m_config->config().shell.session.actions : defaultSessionPanelActions();
-
-  std::vector<SessionPanelActionConfig> out;
-  out.reserve(src.size());
-  for (const auto& row : src) {
-    if (!row.enabled) {
-      continue;
-    }
-    if (!session_action::isKnown(row.action)) {
-      continue;
-    }
-    if (row.action == "lock" || row.action == "lock_and_suspend") {
-      continue;
-    }
-    if (row.action == "command" && (!row.command.has_value() || StringUtils::trim(*row.command).empty())) {
-      continue;
-    }
-    out.push_back(row);
-  }
-  if (out.empty()) {
-    for (const auto& row : defaultSessionPanelActions()) {
-      if (row.action == "lock" || row.action == "lock_and_suspend") {
-        continue;
-      }
-      out.push_back(row);
-    }
-  }
-  return out;
+  return lockscreen::resolveSessionActions(src, defaultSessionPanelActions());
 }
 
 void LockSurface::ensureLayoutChipInPasswordRow() {
@@ -1624,8 +1642,9 @@ void LockSurface::rebuildSessionButtons() {
   }
 
   for (const auto& cfg : actions) {
-    const std::string labelText =
-        cfg.label.has_value() && !cfg.label->empty() ? *cfg.label : i18n::tr(session_action::labelKey(cfg.action));
+    const std::string_view labelKey =
+        cfg.action == "lock_and_suspend" ? session_action::labelKey("suspend") : session_action::labelKey(cfg.action);
+    const std::string labelText = cfg.label.has_value() && !cfg.label->empty() ? *cfg.label : i18n::tr(labelKey);
     auto button = ui::button({
         .out = nullptr,
         .text = labelText,

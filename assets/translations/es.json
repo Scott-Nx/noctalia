@@ -1120,6 +1120,8 @@
           "action": "Grupo",
           "border": "Borde",
           "border-description": "Rol de color del contorno de la cápsula; deja en Predeterminado para no tener contorno",
+          "border-width": "Ancho del borde",
+          "border-width-description": "Grosor del contorno de la cápsula en píxeles; solo se dibuja cuando se establece un color de borde",
           "clear": "Eliminar",
           "deselect": "Deseleccionar",
           "drag": "Reordenar",
@@ -1851,6 +1853,10 @@
           "description": "Rol de color de contorno de cápsula predeterminado; también se admiten colores hexadecimales fijos",
           "label": "Borde de la cápsula"
         },
+        "capsule-border-width": {
+          "description": "Grosor del contorno de la cápsula en píxeles; solo se dibuja cuando se establece un color para el borde de la cápsula",
+          "label": "Ancho del borde de la cápsula"
+        },
         "capsule-fill": {
           "description": "Rol de color de fondo de cápsula predeterminado; también se admiten colores hexadecimales fijos",
           "label": "Relleno de la cápsula"
@@ -1878,6 +1884,10 @@
         "center-widgets": {
           "description": "Widgets en el centro de la barra",
           "label": "Centrar widgets"
+        },
+        "compositor-blur": {
+          "description": "Permitir que el compositor aplique un efecto de desenfoque detrás de esta barra cuando el protocolo de efectos de fondo esté disponible",
+          "label": "Desenfoque del compositor"
         },
         "concave-edge-corners": {
           "description": "Realice muescas cóncavas en dos de las esquinas de la barra (requiere que el margen del borde sea 0); si el margen de los extremos es 0, se recortan las esquinas del borde interior de la barra; de lo contrario, se recortan las esquinas que tocan el borde de la pantalla",
@@ -2155,10 +2165,6 @@
         "main-axis-padding": {
           "description": "Relleno interior en los extremos de la fila de iconos (antes del primer icono y después del último)"
         },
-        "monitors": {
-          "description": "Elige qué monitores muestran el dock (deja vacío para todos); el filtrado de monitor activo se aplica dentro de estos monitores",
-          "label": "Monitores"
-        },
         "pinned-apps": {
           "description": "IDs de entrada de escritorio de las aplicaciones fijadas al dock",
           "label": "Aplicaciones fijadas"
@@ -2394,6 +2400,14 @@
           "description": "Dibuja un contorno alrededor de las notificaciones tipo «toast»",
           "label": "Borde"
         },
+        "border-color": {
+          "description": "Rol de color para el contorno de la notificación emergente; también se admiten colores hexadecimales fijos",
+          "label": "Color del borde"
+        },
+        "border-width": {
+          "description": "Ancho del contorno de las notificaciones emergentes en píxeles; 0 oculta el contorno",
+          "label": "Ancho del borde"
+        },
         "collapse-on-dismiss": {
           "description": "Deslizar las notificaciones emergentes restantes para cerrar huecos cuando se descarta una",
           "label": "Contraer al descartar"
@@ -2405,6 +2419,10 @@
         "filters": {
           "description": "Reglas por remitente para notificaciones emergentes, historial y sonidos; gana el primer filtro activado que coincida",
           "label": "Filtros de notificaciones"
+        },
+        "follow-focused-output": {
+          "description": "Mostrar nuevas notificaciones emergentes en el monitor enfocado",
+          "label": "Seguir la salida enfocada"
         },
         "history-retention-hours": {
           "description": "Eliminar automáticamente las entradas del historial de notificaciones anteriores al número de horas especificado (0 para conservarlas indefinidamente)",
@@ -2453,6 +2471,10 @@
         "toast-opacity": {
           "description": "Opacidad de fondo de las notificaciones emergentes",
           "label": "Opacidad del fondo"
+        },
+        "width": {
+          "description": "Ancho de las notificaciones emergentes en píxeles antes de escalar",
+          "label": "Ancho"
         }
       },
       "panels": {
@@ -3075,9 +3097,25 @@
           "description": "Dibuja un contorno alrededor de las ventanas emergentes OSD",
           "label": "Borde"
         },
+        "osd-border-color": {
+          "description": "Rol de color para el contorno de la ventana emergente OSD; también se admiten colores hexadecimales fijos",
+          "label": "Color del borde"
+        },
+        "osd-border-width": {
+          "description": "Ancho del contorno de las ventanas emergentes OSD en píxeles; 0 oculta el contorno",
+          "label": "Ancho del borde"
+        },
         "osd-enabled": {
           "description": "Interruptor general para todas las ventanas emergentes del OSD; cuando está desactivado, no se muestra ningún OSD",
           "label": "Habilitar OSD"
+        },
+        "osd-follow-focused-output": {
+          "description": "Mostrar las nuevas ventanas emergentes OSD en el monitor enfocado; las ventanas emergentes visibles permanecen donde aparecieron",
+          "label": "Seguir la salida enfocada"
+        },
+        "osd-hide-delay": {
+          "description": "Cuánto tiempo permanece visible una ventana emergente OSD antes de ocultarse",
+          "label": "Retraso de ocultación"
         },
         "osd-kinds-bluetooth": {
           "description": "Mostrar una ventana emergente OSD al alternar el Bluetooth",
@@ -3186,6 +3224,10 @@
         "privacy-screen-filter-regex": {
           "description": "Patrón para ignorar apps al compartir pantalla en indicadores y OSDs",
           "label": "Patrón de filtro de pantalla compartida"
+        },
+        "readline-shortcuts": {
+          "description": "Utilizar atajos de teclado al estilo readline en todos los campos de texto (Ctrl+A se desplaza al principio de la línea en lugar de seleccionar todo).",
+          "label": "Atajos de Readline"
         },
         "screen-time-enabled": {
           "description": "Rastrear el uso por aplicación y mostrarlo en el Centro de control",
@@ -4086,6 +4128,10 @@
           "description": "Rol de color para el contorno de la cápsula; también se admiten colores hexadecimales fijos",
           "label": "Borde de la cápsula"
         },
+        "capsule-border-width": {
+          "description": "Grosor del contorno de la cápsula en píxeles; solo se dibuja cuando se establece un color para el borde de la cápsula",
+          "label": "Ancho del borde de la cápsula"
+        },
         "capsule-fill": {
           "description": "Rol de color para el fondo de la cápsula; también se admiten colores hexadecimales fijos",
           "label": "Relleno de la cápsula"
@@ -4189,7 +4235,7 @@
         "focused-output-only": {
           "description": "Resaltar solo el espacio de trabajo activo en el monitor enfocado",
           "label": "Resaltar solo el monitor enfocado",
-          "taskbar-description": "Usar el color enfocado solo para el espacio de trabajo activo en el monitor que tiene el foco del teclado o del puntero; los demás monitores usan el color ocupado",
+          "taskbar-description": "Resalte únicamente el espacio de trabajo activo en el monitor que tenga el foco del teclado o del puntero; los espacios de trabajo activos en otros monitores utilizan el color de ocupado y el estilo de cápsula inactivo.",
           "workspaces-description": "Resaltar solo el espacio de trabajo activo en el monitor que tiene el foco del teclado o del puntero; los demás monitores muestran su espacio de trabajo activo como ocupado"
         },
         "font-family": {
@@ -4449,6 +4495,10 @@
         "reversed": {
           "description": "Invertir el orden de baja a alta frecuencia de las barras",
           "label": "Invertido"
+        },
+        "rotate-album-art": {
+          "description": "Girar la portada circular del álbum mientras se reproduce el contenido multimedia",
+          "label": "Rotar la portada del álbum"
         },
         "scale": {
           "description": "Escalar este widget en relación con la escala del contenido de la barra",

@@ -621,6 +621,8 @@ void SettingsWindow::destroyWindow() {
   m_renamingMonitorOverrideMatch.clear();
   m_pendingDeleteMonitorOverrideBarName.clear();
   m_pendingDeleteMonitorOverrideMatch.clear();
+  m_renamingDockMonitorOverride.clear();
+  m_pendingDeleteDockMonitorOverride.clear();
   m_pendingResetPageScope.clear();
   m_pendingResetSettingPaths.clear();
   m_searchQuery.clear();
@@ -877,7 +879,9 @@ void SettingsWindow::refreshPluginListIfNeeded() {
       m_pluginList = std::move(plugins);
       m_pluginListDirty = false;
       if (isOpen() && m_selectedSection == "plugins") {
-        requestContentRebuild();
+        requestContentRebuild(
+            /*refreshRegistry=*/false, /*refreshFilterRow=*/false, /*rebuildEditorSheet=*/m_pluginStoreSheetOpen
+        );
       }
     });
   }).detach();

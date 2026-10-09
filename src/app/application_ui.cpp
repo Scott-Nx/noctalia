@@ -148,6 +148,7 @@ void Application::initUiRenderSurfacesAndSettings() {
       &m_compositorPlatform, m_accountsService.get()
   );
   m_settingsWindow.setPluginManager(&m_pluginManager);
+  m_settingsWindow.setPluginRecommendations(&m_pluginRecommendations);
   m_settingsWindow.setIpcService(&m_ipcService);
   m_settingsWindow.setAsyncTextureCache(&m_asyncTextureCache);
   m_settingsWindow.setOpenDesktopWidgetEditor([this]() {
@@ -736,7 +737,9 @@ void Application::initPanelManagerAndPanels() {
 }
 
 void Application::initNotificationAndOsd() {
-  m_notificationToast.initialize(m_wayland, &m_configService, &m_notificationManager, &m_renderContext, &m_httpClient);
+  m_notificationToast.initialize(
+      m_wayland, m_compositorPlatform, &m_configService, &m_notificationManager, &m_renderContext, &m_httpClient
+  );
   m_configService.addReloadCallback([this]() { m_notificationToast.onConfigReload(); });
   auto applyNotificationFilterConfig = [this]() {
     m_notificationManager.setFilters(m_configService.config().notification.filters);
@@ -757,7 +760,7 @@ void Application::initNotificationAndOsd() {
   m_notificationManager.setSoundPlayer(m_soundPlayer.get());
 
   TooltipManager::instance().initialize(m_wayland, &m_configService, &m_renderContext);
-  m_osdOverlay.initialize(m_wayland, &m_configService, &m_renderContext);
+  m_osdOverlay.initialize(m_wayland, m_compositorPlatform, &m_configService, &m_renderContext);
   m_windowSwitcher.initialize(
       m_wayland, &m_renderContext, m_compositorPlatform, &m_configService, &m_asyncTextureCache
   );

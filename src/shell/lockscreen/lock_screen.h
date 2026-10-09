@@ -69,6 +69,9 @@ public:
   /// After suspend/resume, discard pending callbacks on active lock surfaces
   /// while preserving queued work, then request an immediate redraw.
   void forceRepaintAfterResume();
+  /// After suspend/resume, revoke the passwordless grace period as a safety net;
+  /// the boottime expiry check alone would also have expired it by then.
+  void onSystemResumed();
   void onPointerEvent(const PointerEvent& event);
   void onKeyboardEvent(const KeyboardEvent& event);
   [[nodiscard]] bool isActive() const noexcept;
@@ -85,6 +88,10 @@ public:
   /// Runs `fn` after the session reaches interactive lock (`m_locked`), or immediately if already locked.
   /// Used so suspend runs after lock surfaces exist. Cleared if lock fails or the lock request is aborted.
   void runAfterSessionLocked(std::function<void()> fn);
+
+  /// Revokes the grace window: in-flight grace unlock stops working, and arming is
+  /// cleared for a lock already pending or engaged (sleep transitions call this).
+  void resetGracePeriod();
 
   static void handleLocked(void* data, ext_session_lock_v1* lock);
   static void handleFinished(void* data, ext_session_lock_v1* lock);
@@ -129,6 +136,10 @@ private:
   void stopFingerprint();
   void handleFingerprintStatus(const std::string& message, bool isError);
   static void clearSensitiveString(std::string& value);
+  /// Passwordless grace window: any keypress or pointer movement beyond 5px unlocks
+  /// without a password while the window is live (matches hyprlock).
+  [[nodiscard]] bool isInGracePeriod() const noexcept;
+  void tryGraceUnlock();
 
   WaylandConnection* m_wayland = nullptr;
   RenderContext* m_renderContext = nullptr;
@@ -168,5 +179,10 @@ private:
   const WeatherService* m_weather = nullptr;
   HttpClient* m_httpClient = nullptr;
   Timer m_suspendTimeoutTimer;
+  // CLOCK_BOOTTIME millis when the lock flow started; grace expires gracePeriodSeconds after it.
+  std::int64_t m_lockedAtMillis = 0;
+  bool m_graceAllowed = false;
+  double m_pointerEnterX = 0.0;
+  double m_pointerEnterY = 0.0;
   Timer m_unlockTransitionTimer;
 };

@@ -282,6 +282,9 @@ namespace ui {
     if (props.surfaceOpacity.has_value()) {
       control->setSurfaceOpacity(*props.surfaceOpacity);
     }
+    if (props.surfaceRole.has_value()) {
+      control->setSurfaceRole(*props.surfaceRole);
+    }
     applyNodeProps(*control, props);
     if (props.configure) {
       props.configure(*control);

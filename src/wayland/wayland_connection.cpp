@@ -24,6 +24,7 @@
 #include "virtual-keyboard-unstable-v1-client-protocol.h"
 #include "wayland/clipboard_service.h"
 #include "wayland/hyprland/focus_grab_service.h"
+#include "wayland/layer_surface.h"
 #include "wayland/text_input_service.h"
 #include "wayland/virtual_keyboard_service.h"
 #include "wayland/wayland_protocol_policy.h"
@@ -55,7 +56,7 @@
 namespace {
 
   constexpr std::uint32_t kCompositorVersion = 4;
-  constexpr std::uint32_t kSeatVersion = 5;
+  constexpr std::uint32_t kSeatVersion = 8;
   constexpr std::uint32_t kShmVersion = 1;
   constexpr std::uint32_t kSubcompositorVersion = 1;
   constexpr std::uint32_t kLayerShellVersion = 4;
@@ -157,10 +158,15 @@ namespace {
   void outputDone(void* data, wl_output* wlOut) {
     auto* self = static_cast<WaylandConnection*>(data);
     auto* out = self->findOutputByWl(wlOut);
-    if (out != nullptr) {
-      out->done = true;
-      self->notifyOutputReady(wlOut);
+    if (out == nullptr) {
+      return;
     }
+    // A hot-plugged output's first done precedes its xdg-output logical size.
+    if (out->xdgOutput != nullptr && out->logicalWidth <= 0) {
+      return;
+    }
+    out->done = true;
+    self->notifyOutputReady(wlOut);
   }
 
   void outputScale(void* data, wl_output* wlOut, int32_t factor) {
@@ -229,6 +235,7 @@ namespace {
     auto* self = static_cast<WaylandConnection*>(data);
     auto* out = self->findOutputByXdg(xdgOutput);
     if (out != nullptr && out->output != nullptr) {
+      out->done = true;
       self->notifyOutputReady(out->output);
     }
   }
@@ -875,9 +882,9 @@ void WaylandConnection::notifySurfaceOutputLeave(wl_surface* surface, wl_output*
   }
 }
 
-void WaylandConnection::registerLayerSurface(wl_surface* surface, zwlr_layer_surface_v1* layerSurface) {
-  if (surface != nullptr && layerSurface != nullptr) {
-    m_layerSurfaceMap[surface] = layerSurface;
+void WaylandConnection::registerLayerSurface(const LayerSurface& layerSurface) {
+  if (layerSurface.wlSurface() != nullptr && layerSurface.layerSurface() != nullptr) {
+    m_layerSurfaceMap[layerSurface.wlSurface()] = &layerSurface;
   }
 }
 
@@ -895,6 +902,11 @@ void WaylandConnection::unregisterSurface(wl_surface* surface) {
 }
 
 zwlr_layer_surface_v1* WaylandConnection::layerSurfaceFor(wl_surface* surface) const noexcept {
+  const LayerSurface* owner = layerSurfaceOwnerFor(surface);
+  return owner != nullptr ? owner->layerSurface() : nullptr;
+}
+
+const LayerSurface* WaylandConnection::layerSurfaceOwnerFor(wl_surface* surface) const noexcept {
   if (surface == nullptr) {
     return nullptr;
   }

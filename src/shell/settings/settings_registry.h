@@ -323,6 +323,7 @@ namespace settings {
 
   [[nodiscard]] const BarConfig* findBar(const Config& cfg, std::string_view name);
   [[nodiscard]] const BarMonitorOverride* findMonitorOverride(const BarConfig& bar, std::string_view match);
+  [[nodiscard]] const DockMonitorOverride* findDockMonitorOverride(const DockConfig& dock, std::string_view tableName);
   [[nodiscard]] std::vector<std::string> barNames(const Config& cfg);
   [[nodiscard]] std::vector<SettingEntry> buildSettingsRegistry(
       const Config& cfg, const BarConfig* selectedBar, const BarMonitorOverride* selectedMonitorOverride = nullptr,
@@ -332,9 +333,12 @@ namespace settings {
   [[nodiscard]] bool matchesNormalizedSettingQuery(const SettingEntry& entry, std::string_view normalizedQuery);
   [[nodiscard]] bool matchesSettingQuery(const SettingEntry& entry, std::string_view query);
   [[nodiscard]] bool isBarMonitorOverrideSettingPath(const std::vector<std::string>& path);
+  [[nodiscard]] bool isDockMonitorOverrideSettingPath(const std::vector<std::string>& path);
   [[nodiscard]] bool settingEntryMatchesBarNavigation(
       const SettingEntry& entry, std::string_view selectedBarName, std::string_view selectedMonitorOverride
   );
+  [[nodiscard]] bool
+  settingEntryMatchesDockNavigation(const SettingEntry& entry, std::string_view selectedMonitorOverride);
   [[nodiscard]] std::string barSettingContentSectionKey(const SettingEntry& entry);
   [[nodiscard]] std::span<const SettingsSectionDescriptor> settingsSectionDescriptors();
   [[nodiscard]] std::string_view settingsSectionId(SettingsSection section);

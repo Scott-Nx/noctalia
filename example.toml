@@ -63,6 +63,8 @@ alpha     = 0.55                    # multiplied by each component's background 
 [shell.panel]
 transparency_mode     = "solid"     # solid | soft | glass; controls floating-panel opacity and card translucency
 borders               = true        # panel shell outline and in-panel section cards
+border_color          = "outline"   # floating panel outline color: theme role token or #RRGGBB
+border_width          = 1.0         # floating panel outline width in px, 0 hides the stroke
 shadow                = true        # cast the global [shell.shadow] from panel surfaces
 launcher_placement       = "floating" # attached | floating
 clipboard_placement      = "floating" # attached | floating
@@ -187,6 +189,8 @@ background_opacity = 0.97
 border             = true           # outline around toast cards; set false for a borderless look
 border_color       = "outline"      # outline color: theme color role (e.g. "primary") or hex (e.g. "#a8b185")
 border_width       = 1              # outline stroke width in px; raise for a thicker outline
+follow_focused_output = false       # show new toasts on the focused output; visible toasts stay pinned there
+# monitors          = ["DP-1"]      # connector names; omit or leave empty for all monitors
 offset_x           = 20             # absolute horizontal margin from the screen edge
 offset_y           = 8              # absolute vertical margin from the screen edge
 # [notification.filter.rhythmbox]
@@ -214,6 +218,7 @@ background_opacity = 0.97           # background opacity of OSD popups
 border = true                       # outline around OSD popup cards; set false for a borderless look
 border_color = "outline"            # outline color: theme color role (e.g. "primary") or hex (e.g. "#a8b185")
 border_width = 1                    # outline stroke width in px; raise for a thicker outline
+follow_focused_output = false       # show a new OSD on the focused output; keep it pinned until it disappears
 offset_x = 20                       # absolute horizontal margin from the screen edge
 offset_y = 8                        # absolute vertical margin from the screen edge
 # monitors = ["DP-1"]               # connector names; omit or leave empty for all monitors
@@ -237,6 +242,7 @@ privacy = true                      # microphone/camera/screen-share capture cha
 
 [lockscreen]
 enabled                 = true
+grace_period_seconds    = 0           # passwordless unlock on any keypress or mouse movement for this long after locking (opt-in; default 0 = off)
 blurred_desktop         = false       # use a desktop snapshot as the lock screen background (requires wlr-screencopy)
 transition              = ["fade", "wipe", "disc", "stripes", "zoom", "honeycomb"] # empty disables lock/unlock animation
 transition_duration     = 1500        # lock/unlock animation length in milliseconds
@@ -262,6 +268,8 @@ disk_poll_seconds = 10.0            # disk usage and swap usage; graph widgets u
 
 [calendar]
 enabled                     = false
+dedupe_events               = false         # merge an event that appears in more than one calendar into one entry
+dedupe_ignore_patterns      = []            # regexes stripped from a title before events are compared, e.g. ['\s*\(.*\)$']
 refresh_minutes             = 15
 event_date_format           = "%A %e %B"    # date format used for events
 event_time_format           = "%H:%M"       # time format used for events
@@ -293,7 +301,11 @@ effects         = true              # visual weather effects
 
 [audio]
 enable_overdrive = false            # allow volume above 100% (up to 150%)
-enable_sounds = false               # master toggle for UI feedback sounds
+enable_sounds = false               # master toggle for shell sounds (plugins unaffected)
+enable_volume_sounds = true         # sound on volume changes
+enable_notification_sounds = true   # sound on notifications
+enable_power_sounds = true          # sound on charger connect or remove
+enable_screenshot_sounds = true     # sound on screenshots
 sound_volume = 0.5                  # 0.0 - 1.0
 sound_theme = "freedesktop"
 
@@ -445,6 +457,19 @@ launcher_position   = "none"       # none | start | end
 launcher_icon       = "grid-dots"  # Tabler glyph name
 active_monitor_only = false
 pinned              = []            # e.g. ["firefox", "code", "kitty"]
+
+# Per-monitor override example; first match wins and omitted fields inherit [dock]:
+# [dock.monitor.laptop]
+# match               = "eDP-1"
+# enabled             = true
+# icon_size           = 40
+# magnification_scale = 1.3
+# pinned              = ["firefox", "org.gnome.Nautilus"]
+#
+# [dock.monitor.external]
+# match    = "DELL"                 # a word-boundary token in the output description
+# position = "left"
+# enabled  = false
 
 # ── Desktop Widgets ───────────────────────────────────────────────────────────
 

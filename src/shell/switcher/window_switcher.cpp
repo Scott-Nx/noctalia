@@ -630,6 +630,9 @@ void WindowSwitcher::registerIpc(IpcService& ipc) {
       }
       return "ok\n";
     }
+    if (!token.empty() && token != "hold") {
+      return "error: unknown window-switcher action '" + token + "'\n";
+    }
     if (m_platform == nullptr) {
       return "error: compositor unavailable\n";
     }
@@ -640,8 +643,12 @@ void WindowSwitcher::registerIpc(IpcService& ipc) {
     if (output == nullptr) {
       return "error: no output available\n";
     }
+    const bool wasActive = m_active;
     const std::uint32_t modifiers = m_active && m_wayland != nullptr ? m_wayland->keyboardModifiers() : 0;
     showFromShortcut(output, modifiers);
+    if (token == "hold" && !wasActive && m_active) {
+      m_shortcutState.expectHeldModifier();
+    }
     return "ok\n";
   });
 }
@@ -1255,8 +1262,16 @@ bool WindowSwitcher::isModifierRelease(const KeyboardEvent& event) const noexcep
 }
 
 void WindowSwitcher::onKeyboardModifiers(std::uint32_t modifiers) {
-  if (!m_active || !m_shortcutSession || !m_shortcutState.hasPendingRelease()) {
+  if (!m_active || !m_shortcutSession) {
     return;
+  }
+  if (!m_shortcutState.hasPendingRelease()) {
+    const bool focused = m_instance != nullptr
+        && m_instance->surface != nullptr
+        && m_wayland->lastKeyboardSurface() == m_instance->surface->wlSurface();
+    if (!m_shortcutState.hasPendingFocusCheck() || !focused) {
+      return;
+    }
   }
   m_shortcutState.updateModifiers(modifiers);
   scheduleShortcutModifierReleaseCheck();
@@ -1697,12 +1712,18 @@ void WindowSwitcher::positionPanel(Instance& instance, float screenW, float scre
 void WindowSwitcher::buildScene(Instance& instance, std::uint32_t width, std::uint32_t height) {
   UiPhaseScope layoutPhase(UiPhase::Layout);
 
+  if (instance.carouselAnimId != 0) {
+    instance.animations.cancel(instance.carouselAnimId);
+    instance.carouselAnimId = 0;
+  }
+
   const auto w = static_cast<float>(width);
   const auto h = static_cast<float>(height);
   const float scale = instance.uiLayoutScale;
 
   Renderer& renderer = instance.surface->renderTarget().renderer();
   instance.sceneRoot = ui::node({});
+  instance.sceneRoot->setAnimationManager(&instance.animations);
   instance.sceneRoot->setSize(w, h);
 
   auto input = ui::inputArea({});
@@ -1770,7 +1791,6 @@ void WindowSwitcher::buildScene(Instance& instance, std::uint32_t width, std::ui
   instance.tiles.clear();
   instance.counterLabel = nullptr;
   instance.countBackground = nullptr;
-  instance.carouselAnimId = 0;
   const ShellConfig::WindowSwitcherConfig switcherConfig =
       m_config != nullptr ? m_config->config().shell.windowSwitcher : ShellConfig::WindowSwitcherConfig{};
   instance.style = switcherConfig.style;

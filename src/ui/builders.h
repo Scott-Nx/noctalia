@@ -154,6 +154,7 @@ namespace ui {
     std::optional<TextAlign> textAlign = std::nullopt;
     std::optional<bool> enabled = std::nullopt;
     std::optional<float> surfaceOpacity = std::nullopt;
+    std::optional<ColorRole> surfaceRole = std::nullopt;
     std::optional<float> width = std::nullopt;
     std::optional<float> height = std::nullopt;
     std::optional<float> flexGrow = std::nullopt;

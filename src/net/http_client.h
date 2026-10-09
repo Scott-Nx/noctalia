@@ -32,6 +32,8 @@ struct HttpResponse {
   long status = 0;          // HTTP status code (0 when transportOk is false)
   std::string effectiveUrl; // final URL after redirects (empty when unavailable)
   std::string body;
+  // Response header names are lowercase; values exclude surrounding whitespace.
+  std::unordered_map<std::string, std::string> headers;
 };
 
 struct HttpStreamResult {
@@ -123,6 +125,7 @@ private:
     std::string basicUsername;
     std::string basicPassword;
     std::string response;
+    std::unordered_map<std::string, std::string> responseHeaders;
     std::array<char, CURL_ERROR_SIZE> errorBuffer{};
   };
 

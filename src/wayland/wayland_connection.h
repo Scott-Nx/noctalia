@@ -57,6 +57,7 @@ struct zwlr_output_manager_v1;
 struct zwlr_output_head_v1;
 struct zwlr_output_mode_v1;
 class ClipboardService;
+class LayerSurface;
 class FocusGrabService;
 struct DataControlOps;
 class TextInputService;
@@ -273,9 +274,10 @@ public:
   void registerSurfaceOutput(wl_surface* surface, wl_output* output);
   void notifySurfaceOutputEnter(wl_surface* surface, wl_output* output);
   void notifySurfaceOutputLeave(wl_surface* surface, wl_output* output);
-  void registerLayerSurface(wl_surface* surface, zwlr_layer_surface_v1* layerSurface);
+  void registerLayerSurface(const LayerSurface& layerSurface);
   void unregisterSurface(wl_surface* surface);
   [[nodiscard]] zwlr_layer_surface_v1* layerSurfaceFor(wl_surface* surface) const noexcept;
+  [[nodiscard]] const LayerSurface* layerSurfaceOwnerFor(wl_surface* surface) const noexcept;
   void notifyOutputReady(wl_output* output);
 
   // Registry listener entrypoints
@@ -366,7 +368,7 @@ private:
   std::function<void(hyprland_toplevel_mapping_manager_v1*)> m_hyprlandToplevelMappingManagerCallback;
   std::unordered_map<wl_surface*, wl_output*> m_surfaceOutputMap;
   std::unordered_map<wl_surface*, std::vector<wl_output*>> m_surfaceOutputs;
-  std::unordered_map<wl_surface*, zwlr_layer_surface_v1*> m_layerSurfaceMap;
+  std::unordered_map<wl_surface*, const LayerSurface*> m_layerSurfaceMap;
   wl_output* m_lastPointerOutput = nullptr;
   std::chrono::steady_clock::time_point m_lastPointerOutputAt;
   WaylandSeat::PointerEventCallback m_pointerEventCallback;

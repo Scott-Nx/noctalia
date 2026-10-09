@@ -11,6 +11,7 @@
 #include "render/render_context.h"
 #include "render/scene/input_area.h"
 #include "scripting/plugin_catalog.h"
+#include "scripting/plugin_recommendations.h"
 #include "scripting/plugin_registry.h"
 #include "shell/settings/bar_widget_editor.h"
 #include "shell/settings/color_spec_picker.h"
@@ -543,7 +544,7 @@ void SettingsWindow::openSearchPickerPopup(settings::SearchPickerOpenRequest req
   );
 }
 
-void SettingsWindow::openMonitorOverrideCreateDialog(std::string barName) {
+void SettingsWindow::openMonitorOverrideCreateDialog(std::optional<std::string> barName) {
   if (m_wayland == nullptr
       || m_renderContext == nullptr
       || m_surface == nullptr
@@ -563,8 +564,8 @@ void SettingsWindow::openMonitorOverrideCreateDialog(std::string barName) {
   }
 
   const Config& cfg = m_config->config();
-  const BarConfig* bar = settings::findBar(cfg, barName);
-  if (bar == nullptr) {
+  const BarConfig* bar = barName ? settings::findBar(cfg, *barName) : nullptr;
+  if (barName && bar == nullptr) {
     return;
   }
 
@@ -577,9 +578,16 @@ void SettingsWindow::openMonitorOverrideCreateDialog(std::string barName) {
   const std::vector<settings::SelectOption> outputs = availableOutputs();
 
   std::vector<std::string> existingMatches;
-  existingMatches.reserve(bar->monitorOverrides.size());
-  for (const auto& monitorOverride : bar->monitorOverrides) {
-    existingMatches.push_back(monitorOverride.match);
+  if (bar != nullptr) {
+    existingMatches.reserve(bar->monitorOverrides.size());
+    for (const auto& monitorOverride : bar->monitorOverrides) {
+      existingMatches.push_back(monitorOverride.match);
+    }
+  } else {
+    existingMatches.reserve(cfg.dock.monitorOverrides.size());
+    for (const auto& monitorOverride : cfg.dock.monitorOverrides) {
+      existingMatches.push_back(monitorOverride.match);
+    }
   }
 
   // Transient value of the pending match, shared between the segmented picker, the free-text input,
@@ -638,7 +646,11 @@ void SettingsWindow::openMonitorOverrideCreateDialog(std::string barName) {
         }
         return;
       }
-      createMonitorOverride(barName, match);
+      if (barName) {
+        createMonitorOverride(*barName, match);
+      } else {
+        createDockMonitorOverride(match);
+      }
       if (m_editorSheetModal != nullptr) {
         m_editorSheetModal->close();
       }
@@ -2273,6 +2285,11 @@ void SettingsWindow::openPluginStore() {
   std::thread([this, manager, pluginsSnapshot = std::move(pluginsSnapshot)]() mutable {
     manager->fetchStaleCatalogs(pluginsSnapshot);
 
+    const auto activePlugins = manager->list(pluginsSnapshot, scripting::CatalogAccess::Network);
+    std::unordered_map<std::string, std::string> owners;
+    for (const auto& plugin : activePlugins) {
+      owners.emplace(plugin.id, plugin.source);
+    }
     std::vector<settings::StoreCatalogEntry> catalog;
     for (const auto& source : pluginsSnapshot.sources) {
       if (!source.enabled) {
@@ -2283,6 +2300,10 @@ void SettingsWindow::openPluginStore() {
         continue;
       }
       for (auto& entry : result.entries) {
+        const auto owner = owners.find(entry.id);
+        if (owner == owners.end() || owner->second != source.name) {
+          continue;
+        }
         catalog.push_back(
             settings::StoreCatalogEntry{
                 .entry = std::move(entry),
@@ -2293,7 +2314,7 @@ void SettingsWindow::openPluginStore() {
       }
     }
 
-    DeferredCall::callLater([this, catalog = std::move(catalog)]() mutable {
+    DeferredCall::callLater([this, catalog = std::move(catalog), owners = std::move(owners)]() mutable {
       if (m_wayland == nullptr
           || m_renderContext == nullptr
           || m_surface == nullptr
@@ -2308,10 +2329,11 @@ void SettingsWindow::openPluginStore() {
       }
 
       const float scale = uiScale();
+      auto catalogOwners = std::make_shared<std::unordered_map<std::string, std::string>>(std::move(owners));
 
-      auto catalogLookup = std::make_shared<std::unordered_map<std::string, scripting::CatalogEntry>>();
+      auto catalogLookup = std::make_shared<std::unordered_map<std::string, settings::StoreCatalogEntry>>();
       for (const auto& entry : catalog) {
-        catalogLookup->emplace(entry.entry.id, entry.entry);
+        catalogLookup->emplace(entry.entry.id, entry);
       }
 
       auto storeContent = std::make_shared<settings::PluginStoreContent>(
@@ -2332,10 +2354,11 @@ void SettingsWindow::openPluginStore() {
                       } else {
                         scripting::PluginStatus placeholder{.id = id, .name = id, .enabled = true};
                         if (auto it = catalogLookup->find(id); it != catalogLookup->end()) {
-                          placeholder.name = it->second.name;
-                          placeholder.version = it->second.version;
-                          placeholder.icon = it->second.icon;
-                          placeholder.description = it->second.description;
+                          placeholder.name = it->second.entry.name;
+                          placeholder.version = it->second.entry.version;
+                          placeholder.icon = it->second.entry.icon;
+                          placeholder.description = it->second.entry.description;
+                          placeholder.source = it->second.source;
                         }
                         m_pluginList.push_back(std::move(placeholder));
                       }
@@ -2354,10 +2377,24 @@ void SettingsWindow::openPluginStore() {
               .isInstalled = [this](
                                  const std::string& id
                              ) { return m_pluginManager != nullptr && m_pluginManager->isMaterialized(id); },
+              .ownsPlugin =
+                  [this](const std::string& id, const std::string& source) {
+                    const auto plugin = std::ranges::find(m_pluginList, id, &scripting::PluginStatus::id);
+                    return plugin == m_pluginList.end() || plugin->source == source;
+                  },
               .scale = scale,
           },
-          &m_pluginFileCache, &m_pluginStoreScrollState
+          &m_pluginFileCache, &m_pluginStoreScrollState, m_pluginRecommendations
       );
+
+      if (m_pluginRecommendations != nullptr) {
+        m_pluginRecommendations->setOnChanged([weak = std::weak_ptr(storeContent)]() {
+          if (const auto content = weak.lock()) {
+            content->onRecommendationsChanged();
+          }
+        });
+        m_pluginRecommendations->fetchMetrics();
+      }
 
       m_pluginFileCache.setOnReady([storeContent](
                                        const std::string& pluginId, const std::string& filename, const std::string& path
@@ -2369,7 +2406,7 @@ void SettingsWindow::openPluginStore() {
       }
 
       storeContent->setOnRebuildNeeded([this]() {
-        if (m_editorSheetModal != nullptr) {
+        if (m_pluginStoreSheetOpen && m_editorSheetModal != nullptr) {
           m_editorSheetModal->rebuildBody();
         }
       });
@@ -2471,6 +2508,7 @@ void SettingsWindow::openPluginStore() {
                   [storeContent, this]() {
                     storeContent->detachGrid();
                     m_pluginFileCache.setOnReady(nullptr);
+                    storeContent->setOnRebuildNeeded(nullptr);
                     m_pluginStoreSheetOpen = false;
                   },
           }

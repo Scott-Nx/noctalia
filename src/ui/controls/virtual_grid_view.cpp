@@ -629,8 +629,12 @@ void VirtualGridView::onPointerRelease(float localX, float localY) {
     return;
   }
   m_adapterPointerCapture = false;
-  if (m_adapter->onPointerRelease(indexAt(localX, localY))) {
+  const auto result = m_adapter->onPointerRelease(indexAt(localX, localY));
+  if (result.rebind) {
     notifyDataChanged();
+  }
+  if (result.activateIndex.has_value()) {
+    m_adapter->onActivate(*result.activateIndex);
   }
 }
 

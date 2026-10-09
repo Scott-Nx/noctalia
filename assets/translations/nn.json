@@ -2003,10 +2003,6 @@
         "main-axis-padding": {
           "description": "Indre utfylling på festepunktet på endane langs med midtlina (før det fyrste og etter det siste merket)"
         },
-        "monitors": {
-          "description": "Vel kva for skjermar viser festepunktet (haldt dette tomt for alle); aktivskjerm søkjevilkår vert bruka for desse skjermane",
-          "label": "Skjermar"
-        },
         "pinned-apps": {
           "description": "Skrivebordsoppslag-ID for appar på festepunktet",
           "label": "Feste appar"

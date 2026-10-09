@@ -303,6 +303,9 @@ namespace {
     if (ovr.hoverHighlight) {
       resolved.hoverHighlight = *ovr.hoverHighlight;
     }
+    if (ovr.showTooltip) {
+      resolved.showTooltip = *ovr.showTooltip;
+    }
     if (ovr.deadZone.actions) {
       resolved.deadZone.actions = *ovr.deadZone.actions;
     }
@@ -1627,6 +1630,12 @@ bool ConfigService::isOverrideOnlyMonitorOverride(std::string_view barName, std:
   return !barIt->second.contains(std::string(match));
 }
 
+bool ConfigService::isOverrideOnlyDockMonitorOverride(std::string_view tableName) const {
+  return !tableName.empty()
+      && hasOverride({"dock", "monitor", std::string(tableName)})
+      && !m_configFileDockMonitorOverrideNames.contains(std::string(tableName));
+}
+
 bool ConfigService::createBarOverride(std::string_view name) {
   if (m_overridesPath.empty() || name.empty()) {
     return false;
@@ -1824,6 +1833,65 @@ bool ConfigService::deleteMonitorOverride(std::string_view barName, std::string_
     return false;
   }
   return clearOverride({"bar", std::string(barName), "monitor", std::string(match)});
+}
+
+bool ConfigService::createDockMonitorOverride(std::string_view match) {
+  if (m_overridesPath.empty() || match.empty()) {
+    return false;
+  }
+  if (std::ranges::any_of(m_config.dock.monitorOverrides, [match](const DockMonitorOverride& override) {
+        return override.tableName == match || override.match == match;
+      })) {
+    return false;
+  }
+
+  auto* dockRoot = ensureTable(m_overridesTable, "dock");
+  if (dockRoot == nullptr) {
+    return false;
+  }
+  auto* monitorRoot = ensureTable(*dockRoot, "monitor");
+  if (monitorRoot == nullptr || monitorRoot->get(std::string(match)) != nullptr) {
+    return false;
+  }
+  if (ensureTable(*monitorRoot, match) == nullptr) {
+    return false;
+  }
+
+  if (!writeOverridesToFile()) {
+    kLog.warn("failed to write {}", m_overridesPath);
+    return false;
+  }
+
+  m_ownOverridesWritePending = true;
+  loadAll();
+  fireReloadCallbacks();
+  return true;
+}
+
+bool ConfigService::renameDockMonitorOverride(std::string_view oldTableName, std::string_view newMatch) {
+  if (oldTableName.empty()
+      || newMatch.empty()
+      || oldTableName == newMatch
+      || !isOverrideOnlyDockMonitorOverride(oldTableName)) {
+    return false;
+  }
+  if (std::ranges::any_of(
+          m_config.dock.monitorOverrides, [oldTableName, newMatch](const DockMonitorOverride& override) {
+            return override.tableName != oldTableName && (override.tableName == newMatch || override.match == newMatch);
+          }
+      )) {
+    return false;
+  }
+  return renameOverrideTable(
+      {"dock", "monitor", std::string(oldTableName)}, {"dock", "monitor", std::string(newMatch)}
+  );
+}
+
+bool ConfigService::deleteDockMonitorOverride(std::string_view tableName) {
+  if (!isOverrideOnlyDockMonitorOverride(tableName)) {
+    return false;
+  }
+  return clearOverride({"dock", "monitor", std::string(tableName)});
 }
 
 bool ConfigService::deleteCalendarAccountOverride(std::string_view id) {

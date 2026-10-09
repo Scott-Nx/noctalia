@@ -257,7 +257,7 @@ namespace {
       pthread_sigmask(SIG_BLOCK, &pipeMask, nullptr);
 
       int stdinPipe[2] = {-1, -1};
-      if (::pipe(stdinPipe) != 0) {
+      if (::pipe2(stdinPipe, O_CLOEXEC) != 0) {
         kLog.warn("screenshot pipe: failed to create stdin pipe");
         return;
       }
@@ -1870,6 +1870,6 @@ void ScreenshotService::setSoundPlayer(SoundPlayer* soundPlayer) { m_soundPlayer
 
 void ScreenshotService::playCaptureSound() {
   if (m_soundPlayer != nullptr) {
-    m_soundPlayer->play("screen-capture");
+    m_soundPlayer->play(SoundPlayer::kEventScreenCapture);
   }
 }

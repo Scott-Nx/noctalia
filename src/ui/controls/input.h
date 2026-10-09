@@ -3,6 +3,7 @@
 #include "core/timer_manager.h"
 #include "render/core/renderer.h"
 #include "render/scene/node.h"
+#include "ui/palette.h"
 #include "ui/signal.h"
 #include "ui/style.h"
 #include "ui/text_input_client.h"
@@ -39,6 +40,10 @@ public:
   void setHorizontalPadding(float padding);
   void setClearButtonEnabled(bool enabled);
   void setPasswordMode(bool enabled);
+  /// Shows a password-mode value as plain text. Display only: the field keeps password semantics (no
+  /// clipboard export, no undo history, sensitive text-input hints). Ignored outside password mode;
+  /// entering or leaving password mode conceals the value again.
+  void setPasswordRevealed(bool revealed);
   /// Multi-line editing: Enter inserts '\n' (Ctrl+Enter submits), the text wraps
   /// at the viewport width and scrolls vertically. The control keeps whatever
   /// height layout assigns (explicit height or flex-grown) instead of forcing
@@ -62,8 +67,12 @@ public:
   void setSubmitOnEnter(bool enabled);
   void setEnabled(bool enabled);
   void setSurfaceOpacity(float opacity);
+  /// Unfocused frame fill. Fields on a SurfaceVariant card use Surface so they stand out; focus always fills with
+  /// Surface.
+  void setSurfaceRole(ColorRole role);
   void setFrameRadius(float radius);
   [[nodiscard]] bool enabled() const noexcept { return m_enabled; }
+  [[nodiscard]] bool passwordRevealed() const noexcept { return m_passwordRevealed; }
   void selectAll();
   void moveCaretLeft(bool shift = false);
   void moveCaretRight(bool shift = false);
@@ -136,6 +145,7 @@ private:
   [[nodiscard]] std::size_t selectionStart() const noexcept;
   [[nodiscard]] std::size_t selectionEnd() const noexcept;
   [[nodiscard]] bool isReadOnlyVisual() const noexcept;
+  [[nodiscard]] bool passwordMasked() const noexcept { return m_passwordMode && !m_passwordRevealed; }
   [[nodiscard]] EditSnapshot currentEditSnapshot() const;
   void deleteSelection();
   void clearEditHistory();
@@ -231,10 +241,12 @@ private:
   float m_horizontalPadding = Style::spaceMd;
   bool m_clearButtonEnabled = false;
   bool m_passwordMode = false;
+  bool m_passwordRevealed = false;
   bool m_multiline = false;
   bool m_invalid = false;
   bool m_frameVisible = true;
   bool m_embeddedOnSolidPrimary = false;
+  ColorRole m_surfaceRole = ColorRole::SurfaceVariant;
   float m_surfaceOpacity = 1.0F;
   float m_frameRadius = Style::radiusMd;
   bool m_enabled = true;
