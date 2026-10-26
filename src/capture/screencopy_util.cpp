@@ -173,7 +173,7 @@ namespace {
   }
 
   [[nodiscard]] bool captureNeedsOutputTransform(const ScreencopyImage& image, const WaylandOutput& output) {
-    if (output.transform == WL_OUTPUT_TRANSFORM_NORMAL) {
+    if (output.effectiveTransform() == WL_OUTPUT_TRANSFORM_NORMAL) {
       return false;
     }
 
@@ -188,7 +188,7 @@ namespace {
 
   void orientCaptureToLogical(ScreencopyImage& image, const WaylandOutput& output) {
     const std::int32_t transform =
-        captureNeedsOutputTransform(image, output) ? output.transform : WL_OUTPUT_TRANSFORM_NORMAL;
+        captureNeedsOutputTransform(image, output) ? output.effectiveTransform() : WL_OUTPUT_TRANSFORM_NORMAL;
     screencopy::orientCaptureForTransform(image, transform);
   }
 

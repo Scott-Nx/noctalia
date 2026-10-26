@@ -159,9 +159,9 @@ def run(binary):
         env = dict(os.environ)
         for name in ["HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "http_proxy", "https_proxy", "all_proxy", "NO_PROXY", "no_proxy"]:
             env.pop(name, None)
-        env.update(NOCTALIA_RECOMMENDATION_FIXTURE="1", NOCTALIA_CONFIG_HOME=str(root / "config"), NOCTALIA_STATE_HOME=str(root / "state"), NOCTALIA_DATA_HOME=str(root / "data"), HTTPS_PROXY=f"http://127.0.0.1:{server.server_port}", SSL_CERT_FILE=str(cert), CURL_CA_BUNDLE=str(cert), NOCTALIA_ASSETS_DIR=str(Path("assets").resolve()))
+        env.update(NOCTALIA_RECOMMENDATION_FIXTURE="1", NOCTALIA_CONFIG_HOME=str(root / "config"), NOCTALIA_STATE_HOME=str(root / "state"), NOCTALIA_DATA_HOME=str(root / "data"), HTTPS_PROXY=f"http://127.0.0.1:{server.server_port}", NOCTALIA_ASSETS_DIR=str(Path("assets").resolve()))
         try:
-            subprocess.run([str(Path(binary).resolve()), "--http"], env=env, check=True, timeout=60)
+            subprocess.run([str(Path(binary).resolve()), "--http", str(cert)], env=env, check=True, timeout=60)
             if violations:
                 raise AssertionError(violations)
             assert not any(call[0] == "PUT" and call[1] in ["Deprecated", "Uninstalled"] for call in calls)

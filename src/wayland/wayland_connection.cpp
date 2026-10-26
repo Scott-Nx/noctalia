@@ -291,6 +291,10 @@ namespace {
     static_cast<WaylandConnection*>(data)->onOutputHeadScale(head, wl_fixed_to_double(scale));
   }
 
+  void outputHeadTransform(void* data, zwlr_output_head_v1* head, int32_t transform) {
+    static_cast<WaylandConnection*>(data)->onOutputHeadTransform(head, transform);
+  }
+
   // libwayland aborts on an event with a null listener slot, even one we don't need.
   const zwlr_output_head_v1_listener kOutputHeadListener = {
       .name = outputHeadName,
@@ -300,7 +304,7 @@ namespace {
       .enabled = [](void*, zwlr_output_head_v1*, int32_t) {},
       .current_mode = [](void*, zwlr_output_head_v1*, zwlr_output_mode_v1*) {},
       .position = [](void*, zwlr_output_head_v1*, int32_t, int32_t) {},
-      .transform = [](void*, zwlr_output_head_v1*, int32_t) {},
+      .transform = outputHeadTransform,
       .scale = outputHeadScale,
       .finished = outputHeadFinished,
       .make = outputHeadMake,
@@ -963,6 +967,10 @@ void WaylandConnection::setLockKeysChangeCallback(WaylandSeat::LockKeysChangeCal
   m_seatHandler.setLockKeysChangeCallback(std::move(callback));
 }
 
+void WaylandConnection::setKeyboardLayoutChangeCallback(WaylandSeat::KeyboardLayoutChangeCallback callback) {
+  m_seatHandler.setKeyboardLayoutChangeCallback(std::move(callback));
+}
+
 void WaylandConnection::setClipboardService(ClipboardService* clipboardService) {
   m_clipboardService = clipboardService;
   bindClipboardService();
@@ -1043,12 +1051,24 @@ std::vector<ToplevelInfo> WaylandConnection::extWindowsWithoutAppId() const {
   return m_extForeignToplevels.isBound() ? m_extForeignToplevels.windowsWithoutAppId() : std::vector<ToplevelInfo>{};
 }
 
+ext_foreign_toplevel_handle_v1* WaylandConnection::extHandleForIdentifier(std::string_view identifier) const {
+  return m_extForeignToplevels.isBound() ? m_extForeignToplevels.extHandleForIdentifier(identifier) : nullptr;
+}
+
 bool WaylandConnection::containsWlrToplevelHandle(zwlr_foreign_toplevel_handle_v1* handle) const {
   return m_toplevelsHandler.containsWlrHandle(handle);
 }
 
 void WaylandConnection::activateToplevel(zwlr_foreign_toplevel_handle_v1* handle) {
   m_toplevelsHandler.activateHandle(handle, m_seat);
+}
+
+bool WaylandConnection::minimizeToplevel(zwlr_foreign_toplevel_handle_v1* handle) {
+  return m_toplevelsHandler.minimizeHandle(handle);
+}
+
+std::optional<bool> WaylandConnection::toplevelMinimized(zwlr_foreign_toplevel_handle_v1* handle) const {
+  return m_toplevelsHandler.minimized(handle);
 }
 
 void WaylandConnection::closeToplevel(zwlr_foreign_toplevel_handle_v1* handle) {
@@ -1142,18 +1162,6 @@ void WaylandConnection::activateSurface(wl_surface* surface) {
   }
 }
 
-void WaylandConnection::activateToplevelForAppId(std::string_view appId) {
-  if (!hasForeignToplevelManager() || appId.empty()) {
-    return;
-  }
-  const std::string idLower = StringUtils::toLower(std::string(appId));
-  const auto windows = windowsForApp(idLower, idLower);
-  if (windows.empty()) {
-    return;
-  }
-  activateToplevel(windows.back().handle);
-}
-
 wl_display* WaylandConnection::display() const noexcept { return m_display; }
 
 std::string WaylandConnection::describeDisplayError(int operationErrno) const {
@@ -1208,6 +1216,18 @@ ext_idle_notification_v1* WaylandConnection::createIdleNotification(std::uint32_
   }
 
   return ext_idle_notifier_v1_get_idle_notification(m_idleNotifier, timeoutMs, seat);
+}
+
+ext_idle_notification_v1* WaylandConnection::createInputIdleNotification(std::uint32_t timeoutMs) const {
+  wl_seat* const seat = this->seat();
+  if (m_idleNotifier == nullptr
+      || seat == nullptr
+      || ext_idle_notifier_v1_get_version(m_idleNotifier)
+          < EXT_IDLE_NOTIFIER_V1_GET_INPUT_IDLE_NOTIFICATION_SINCE_VERSION) {
+    return nullptr;
+  }
+
+  return ext_idle_notifier_v1_get_input_idle_notification(m_idleNotifier, timeoutMs, seat);
 }
 
 zwp_idle_inhibit_manager_v1* WaylandConnection::idleInhibitManager() const noexcept { return m_idleInhibitManager; }
@@ -1266,6 +1286,13 @@ void WaylandConnection::onOutputHeadScale(zwlr_output_head_v1* head, double scal
   }
 }
 
+void WaylandConnection::onOutputHeadTransform(zwlr_output_head_v1* head, std::int32_t transform) {
+  auto it = m_outputHeads.find(head);
+  if (it != m_outputHeads.end()) {
+    it->second.transform = transform;
+  }
+}
+
 void WaylandConnection::onOutputHeadMode(zwlr_output_head_v1* /*head*/, zwlr_output_mode_v1* mode) {
   if (mode == nullptr) {
     return;
@@ -1307,6 +1334,10 @@ void WaylandConnection::matchPendingOutputHeads() {
       changed = true;
     }
     it->headScaleFactor = info.scaleFactor;
+    if (it->headTransform != info.transform) {
+      it->headTransform = info.transform;
+      changed = true;
+    }
     if (recomputeConfiguredScale(*it)) {
       changed = true;
     }
@@ -1525,8 +1556,8 @@ void WaylandConnection::bindGlobal(
 
   if (interfaceName == ext_foreign_toplevel_list_v1_interface.name) {
     const auto compositor = compositors::detect();
-    // Niri needs the ext identifier for an exact join with its numeric IPC window id. Keep the
-    // wlr manager bound as well because other shell features still consume its richer state.
+    // ext handles carry the exact identifier joined with Niri/Umbriel IPC window ids and are the source for toplevel
+    // image capture. Keep the wlr manager bound as well because other shell features still consume its richer state.
     if (!wayland_protocol_policy::shouldBindExtForeignToplevelList(compositor)) {
       return;
     }

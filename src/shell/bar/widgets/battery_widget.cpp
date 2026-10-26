@@ -28,6 +28,11 @@ namespace {
   constexpr float kGraphicTerminalHeight = 7.0F;
   constexpr float kGraphicCornerRadius = 4.0F;
 
+  // The bar updates once a minute unless a widget renders seconds, so a shorter
+  // interval would never be honoured. The second of slack keeps an update that
+  // lands just short of a full minute from pushing the refresh out to two.
+  constexpr auto kTooltipForceRefreshInterval = std::chrono::seconds(59);
+
   const char* batteryStateGlyph(BatteryState state) {
     if (state == BatteryState::Charging) {
       return "bolt-filled";
@@ -234,11 +239,13 @@ void BatteryWidget::layoutGraphicMode(Renderer& renderer) {
   const float cornerR = std::round(kGraphicCornerRadius * scale);
   const float labelPadding = std::round(Style::spaceXs * 0.5F * m_contentScale);
   const float stateGap = std::round(Style::spaceXs * 0.5F * m_contentScale);
-  const bool showLabel = m_overlayLabel != nullptr && m_showLabel;
+  const bool showLabel = m_overlayLabel != nullptr && m_overlayLabel->visible();
   const bool showStateGlyph = m_overlayGlyph != nullptr && m_overlayGlyph->visible();
 
   // Labels use a small, heavy face. Horizontal bars keep the body at its unlabelled size, so the label shrinks to fit
-  // it instead; vertical bars are too narrow for that and let the body hug the number.
+  // it instead; vertical bars are too narrow for that and size the body to a two-digit reference so it keeps one width
+  // between 5% and 99%.
+  float labelW = 0.0F;
   if (showLabel) {
     float fontSize = (m_isVertical ? Style::fontSizeMini : Style::fontSizeCaption) * fontScale();
     const FontWeight fontWeight = std::max(labelFontWeight(), FontWeight::SemiBold);
@@ -252,13 +259,17 @@ void BatteryWidget::layoutGraphicMode(Renderer& renderer) {
       m_overlayLabel->setFontSize(fontSize);
       m_overlayLabel->measure(renderer);
     }
+    labelW = m_overlayLabel->width();
+    if (m_isVertical) {
+      labelW = std::max(labelW, std::ceil(renderer.measureText("00", fontSize, m_overlayLabel->font()).width));
+    }
   }
   if (showStateGlyph) {
     m_overlayGlyph->setGlyphSize(Style::fontSizeCaption * m_contentScale);
     m_overlayGlyph->measure(renderer);
   }
 
-  const float labelW = showLabel ? m_overlayLabel->width() : 0.0F;
+  const float actualLabelW = showLabel ? m_overlayLabel->width() : 0.0F;
   const float labelH = showLabel ? m_overlayLabel->height() : 0.0F;
   const float stateW = showStateGlyph ? m_overlayGlyph->width() : 0.0F;
   const float stateH = showStateGlyph ? m_overlayGlyph->height() : 0.0F;
@@ -289,7 +300,7 @@ void BatteryWidget::layoutGraphicMode(Renderer& renderer) {
   updateFillGeometry();
 
   if (showLabel) {
-    m_overlayLabel->setPosition(bodyX + (batteryW - labelW) * 0.5F, bodyY + (batteryH - labelH) * 0.5F);
+    m_overlayLabel->setPosition(bodyX + (batteryW - actualLabelW) * 0.5F, bodyY + (batteryH - labelH) * 0.5F);
   }
   if (showStateGlyph) {
     if (m_isVertical) {
@@ -402,7 +413,7 @@ void BatteryWidget::syncState(Renderer& renderer) {
 
   const auto now = std::chrono::steady_clock::now();
   const bool forceTimeRefresh = (m_lastTooltipRefreshTime == std::chrono::steady_clock::time_point{})
-      || (now - m_lastTooltipRefreshTime >= std::chrono::seconds(15));
+      || (now - m_lastTooltipRefreshTime >= kTooltipForceRefreshInterval);
 
   if (s.percentage == m_lastPct
       && s.state == m_lastState
@@ -481,8 +492,9 @@ void BatteryWidget::syncState(Renderer& renderer) {
       }
     }
 
+    // A full battery needs no number, and three digits would stretch the narrow vertical body.
     if (m_overlayLabel != nullptr) {
-      m_overlayLabel->setVisible(m_showLabel);
+      m_overlayLabel->setVisible(m_showLabel && !(m_isVertical && pct >= 100));
     }
     if (m_overlayGlyph != nullptr) {
       m_overlayGlyph->setVisible(stateGlyph != nullptr);

@@ -8,12 +8,14 @@
 #include <cstdio>
 #include <filesystem>
 #include <string>
+#include <utility>
 
 namespace {
   constexpr Logger kLog("http");
   constexpr float kSlowCurlOperationDebugMs = 50.0F;
   constexpr float kSlowCurlOperationWarnMs = 1000.0F;
   constexpr float kCurlServiceGapWarnMs = 5000.0F;
+  constexpr const char* kUserAgent = "noctalia/" NOCTALIA_VERSION;
 
   float elapsedSince(std::chrono::steady_clock::time_point start) {
     return std::chrono::duration<float, std::milli>(std::chrono::steady_clock::now() - start).count();
@@ -113,8 +115,12 @@ namespace {
   }
 } // namespace
 
-void HttpClient::applyCommonOptions(CURL* easy) {
+void HttpClient::applyCommonOptions(CURL* easy) const {
   curl_easy_setopt(easy, CURLOPT_NOSIGNAL, 1L);
+  curl_easy_setopt(easy, CURLOPT_USERAGENT, kUserAgent);
+  if (!m_caBundlePath.empty()) {
+    curl_easy_setopt(easy, CURLOPT_CAINFO, m_caBundlePath.c_str());
+  }
   // With the threaded resolver, curl reports a DNS timeout while its getaddrinfo() thread is
   // still blocked. Without this, curl_easy_cleanup() joins that thread and stalls the main loop
   // for as long as the resolver takes. CURLOPT_QUICK_EXIT detaches it instead: the abandoned
@@ -122,7 +128,16 @@ void HttpClient::applyCommonOptions(CURL* easy) {
   curl_easy_setopt(easy, CURLOPT_QUICK_EXIT, 1L);
 }
 
-HttpClient::HttpClient() {
+void HttpClient::applyTlsClientCert(CURL* easy, const std::shared_ptr<const HttpTlsClientCert>& cert) {
+  if (cert == nullptr) {
+    return;
+  }
+  // curl copies both strings, so the request does not have to outlive the transfer.
+  curl_easy_setopt(easy, CURLOPT_SSLCERT, cert->clientCertPath.c_str());
+  curl_easy_setopt(easy, CURLOPT_SSLKEY, cert->clientKeyPath.c_str());
+}
+
+HttpClient::HttpClient(std::filesystem::path caBundlePath) : m_caBundlePath(std::move(caBundlePath)) {
   curl_global_init(CURL_GLOBAL_DEFAULT);
   m_multi = curl_multi_init();
 }
@@ -350,6 +365,7 @@ void HttpClient::request(HttpRequest req, ResponseCallback cb) {
     curl_easy_setopt(easy, CURLOPT_SSL_VERIFYPEER, 0L);
     curl_easy_setopt(easy, CURLOPT_SSL_VERIFYHOST, 0L);
   }
+  applyTlsClientCert(easy, req.tlsClientCert);
   if (req.followRedirects) {
     curl_easy_setopt(easy, CURLOPT_FOLLOWLOCATION, 1L);
     if (req.allowRedirectAuth) {
@@ -439,6 +455,7 @@ HttpClient::StreamId HttpClient::startStream(HttpRequest req, StreamDataCallback
     curl_easy_setopt(easy, CURLOPT_SSL_VERIFYPEER, 0L);
     curl_easy_setopt(easy, CURLOPT_SSL_VERIFYHOST, 0L);
   }
+  applyTlsClientCert(easy, req.tlsClientCert);
   if (req.followRedirects) {
     curl_easy_setopt(easy, CURLOPT_FOLLOWLOCATION, 1L);
     if (req.allowRedirectAuth) {
